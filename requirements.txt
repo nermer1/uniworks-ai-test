@@ -1,0 +1,13 @@
+# ─────────────────────────────────────────────────────────
+# 코어 — 모든 배포에 항상 설치 (모듈/provider 무관)
+# ─────────────────────────────────────────────────────────
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+httpx==0.28.1
+python-multipart==0.0.20
+PyMuPDF==1.27.2.3   # OCR 모듈 PDF 입력(페이지→이미지) 전처리
+# litellm  # Stage 2: model_gateway를 litellm으로 교체할 때 (코어로 편입)
+
+# 선택 의존성은 산 것만 설치 (à la carte):
+#   Vertex provider 쓰면:   uv pip install -r requirements-vertex.txt
+#   recommend 모듈 쓰면:    uv pip install -r requirements-recommend.txt

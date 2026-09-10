@@ -1,0 +1,5 @@
+# Vertex AI(GCP) provider 쓰는 배포에서만 설치.
+#   uv pip install -r requirements-vertex.txt
+# Gemini(AI Studio)·OpenAI·Claude 등 OpenAI 호환 provider만 쓰면 이건 불필요.
+google-auth
+requests      # google.auth.transport.requests가 내부적으로 사용

@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Platform — 콘솔</title>
+<meta name="color-scheme" content="light dark">
+<script>document.documentElement.setAttribute('data-theme', localStorage.getItem('theme') || 'light');</script>
+<link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="title">AI Platform</div>
+      <div class="sub">사내 콘솔</div>
+    </div>
+    <nav class="nav" id="nav"><!-- 권한 따라 app.js가 채움 --></nav>
+    <div class="side-foot">
+      <button class="btn btn-sm" id="themeBtn" style="width:100%">🌗 테마</button>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="pg" id="pageTitle">대시보드</div>
+      <div class="spacer"></div>
+      <span class="who">👤 <b id="whoName">-</b></span>
+      <span class="role-badge" id="whoRole">-</span>
+      <button class="btn btn-sm" id="logoutBtn">로그아웃</button>
+    </div>
+
+    <div class="content">
+      <!-- 사용량 (usage:read) -->
+      <section id="sec-usage" hidden>
+        <div class="sec-title">사용량</div>
+        <div class="sec-desc">고객사별·기능별 사용량 집계 (청구 근거)</div>
+        <div class="summary" id="usageSummary"></div>
+        <div class="card"><div class="card-head">사용량 원장 롤업</div>
+          <div class="tbl-wrap"><table class="tbl" id="usageTable"></table></div>
+        </div>
+      </section>
+
+      <!-- 접근 로그 (logs:read) -->
+      <section id="sec-logs" hidden>
+        <div class="sec-title">접근 로그</div>
+        <div class="sec-desc">최근 API 요청 (관측)</div>
+        <div class="card"><div class="card-head">최근 요청</div>
+          <div class="tbl-wrap"><table class="tbl" id="logsTable"></table></div>
+        </div>
+      </section>
+
+      <!-- 유저 관리 (users:manage) -->
+      <section id="sec-users" hidden>
+        <div class="row-between">
+          <div>
+            <div class="sec-title">유저 관리</div>
+            <div class="sec-desc">사내 계정 생성·역할 관리</div>
+          </div>
+          <button class="btn btn-primary" id="newUserBtn">+ 유저 추가</button>
+        </div>
+        <div class="card" id="newUserCard" hidden style="margin-bottom:18px">
+          <div class="card-head">새 유저</div>
+          <div class="card-body">
+            <div class="field"><label>아이디</label><input class="inp" id="nu-username"></div>
+            <div class="field"><label>비밀번호</label><input class="inp" type="password" id="nu-password"></div>
+            <div class="field"><label>역할</label>
+              <select class="inp" id="nu-role"><option>개발자</option><option>회계</option><option>관리자</option></select>
+            </div>
+            <button class="btn btn-primary" id="nu-save">생성</button>
+          </div>
+        </div>
+        <div class="card"><div class="card-head">유저 목록</div>
+          <div class="tbl-wrap"><table class="tbl" id="usersTable"></table></div>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+<div class="toast-wrap" id="toasts"></div>
+<script src="/static/app.js"></script>
+</body>
+</html>

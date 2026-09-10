@@ -1,0 +1,31 @@
+{
+  "enabled_modules": ["ocr", "recommend"],
+  "default_model": "card-mock",
+  "models": {
+    "card-mock": {
+      "provider": "mock"
+    },
+    "card-9b": {
+      "provider": "openai_compat",
+      "base_url": "http://REPLACE-ME:8000/v1",
+      "model": "qwen2.5-vl",
+      "structured_output": "json_schema"
+    },
+    "card-commercial": {
+      "provider": "openai_compat",
+      "base_url": "https://generativelanguage.googleapis.com/v1beta/openai",
+      "model": "gemini-2.5-flash",
+      "api_key_env": "GEMINI_API_KEY",
+      "structured_output": "json_schema",
+      "reasoning_effort": "low"
+    },
+    "card-vertex": {
+      "provider": "vertex",
+      "project_id": "vertex-ai-user-505201",
+      "location": "global",
+      "model": "google/gemini-2.5-flash",
+      "structured_output": "json_schema",
+      "reasoning_effort": "minimal"
+    }
+  }
+}

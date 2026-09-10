@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+data/*.db
+data/*.db-wal
+data/*.db-shm
+log/
+
+# 서비스계정 키 등 비밀 — 절대 커밋 금지 (secrets/ 폴더에 넣는 걸 권장)
+secrets/
+*.sa.json
+*service-account*.json

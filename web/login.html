@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Platform — 로그인</title>
+<meta name="color-scheme" content="light dark">
+<script>document.documentElement.setAttribute('data-theme', localStorage.getItem('theme') || 'light');</script>
+<link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+<div class="login-wrap">
+  <div class="login-card">
+    <div class="login-brand">
+      <div class="title">AI Platform</div>
+      <div class="sub">사내 콘솔</div>
+    </div>
+    <div class="err-box" id="err"></div>
+    <form id="loginForm">
+      <div class="field">
+        <label for="username">아이디</label>
+        <input class="inp" type="text" id="username" name="username" autocomplete="username" autofocus required>
+      </div>
+      <div class="field">
+        <label for="password">비밀번호</label>
+        <input class="inp" type="password" id="password" name="password" autocomplete="current-password" required>
+      </div>
+      <button type="submit" class="login-btn">로그인</button>
+    </form>
+  </div>
+</div>
+<script>
+const form = document.getElementById('loginForm');
+const err = document.getElementById('err');
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  err.classList.remove('show');
+  const body = new URLSearchParams({
+    username: document.getElementById('username').value,
+    password: document.getElementById('password').value,
+  });
+  try {
+    const res = await fetch('/auth/login', { method: 'POST', body });   // form-encoded, 쿠키 same-origin
+    const json = await res.json();
+    if (json.ok) {
+      location.href = '/';                 // 로그인 성공 → 콘솔로
+    } else {
+      err.textContent = json.error?.message || '로그인 실패';
+      err.classList.add('show');
+    }
+  } catch (e) {
+    err.textContent = '서버에 연결할 수 없습니다';
+    err.classList.add('show');
+  }
+});
+</script>
+</body>
+</html>
