@@ -1,0 +1,24 @@
+{
+  "type": "object",
+  "properties": {
+    "가맹점명":   { "type": ["string", "null"] },
+    "사업자번호": { "type": ["string", "null"] },
+    "대표자명":   { "type": ["string", "null"] },
+    "가맹점번호": { "type": ["string", "null"] },
+    "사업자주소": { "type": ["string", "null"] },
+    "전화번호":   { "type": ["string", "null"] },
+    "거래일시":   { "type": ["string", "null"] },
+    "승인상태":   { "type": ["string", "null"] },
+    "결제방법":   { "type": ["string", "null"] },
+    "승인번호":   { "type": ["string", "null"] },
+    "공급가액":   { "type": ["integer", "null"] },
+    "부가세":     { "type": ["integer", "null"] },
+    "봉사료":     { "type": ["integer", "null"] },
+    "총액":       { "type": ["integer", "null"] }
+  },
+  "required": [
+    "가맹점명", "사업자번호", "대표자명", "가맹점번호", "사업자주소", "전화번호",
+    "거래일시", "승인상태", "결제방법", "승인번호",
+    "공급가액", "부가세", "봉사료", "총액"
+  ]
+}

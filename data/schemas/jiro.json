@@ -1,0 +1,71 @@
+{
+  "type": "object",
+  "properties": {
+    "문서종류": {
+      "type": ["string", "null"],
+      "description": "이 증빙의 종류. 문서 제목·형식으로 의미 판단: 지로영수증 / 공과금고지서 / 납입고지서 / 기타 중 하나. 판단 불가면 null."
+    },
+    "통화": {
+      "type": ["string", "null"],
+      "description": "금액의 통화. ISO 4217 코드(KRW/USD/JPY/EUR 등). 화폐기호·표기로 판단. 통화 단서가 전혀 없으면 한국 고지서이므로 KRW."
+    },
+    "발행기관": {
+      "type": ["string", "null"],
+      "description": "고지서 발행 기관명(예: 서울특별시 동부 수도사업소). 없으면 null."
+    },
+    "요금종류": {
+      "type": ["string", "null"],
+      "description": "공과금 종류(예: 수도요금, 전기요금, 가스요금). 문서 제목에서. 없으면 null."
+    },
+    "청구연월": {
+      "type": ["string", "null"],
+      "description": "청구 대상 연월(예: 2026-03). 청구서 제목의 'YYYY년 M월'에서. 없으면 null."
+    },
+    "납부자명": {
+      "type": ["string", "null"],
+      "description": "납부자/수용가 성명 또는 상호(예: 하이마트). '성명'/'납부자' 라벨 값. 없으면 null."
+    },
+    "고객번호": {
+      "type": ["string", "null"],
+      "description": "고객번호/수용가번호/납부자번호. 하이픈 포함 형식 그대로 문자열. 없으면 null."
+    },
+    "납부자주소": {
+      "type": ["string", "null"],
+      "description": "납부자(사용처) 주소. 없으면 null."
+    },
+    "업종": {
+      "type": ["string", "null"],
+      "description": "용도/업종 구분(예: 일반용(2개월)). 라벨 값. 없으면 null."
+    },
+    "사용기간": {
+      "type": ["string", "null"],
+      "description": "사용/검침 기간(예: 2025.12.28 ~ 2026.2.27). 없으면 null."
+    },
+    "사용량": {
+      "type": ["string", "null"],
+      "description": "사용량(단위 포함, 예: 39 m³ 또는 39kWh). 없으면 null."
+    },
+    "요금내역": {
+      "type": "array",
+      "description": "요금 종류별 금액 항목. 화면 표의 항목별로 담음. 항목명이 보이는 것만.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "항목": { "type": "string", "description": "요금 항목명(예: 상수도요금, 하수도요금, 물이용부담금)" },
+          "금액": { "type": ["integer", "null"], "description": "해당 항목 금액(콤마·원 제외 정수). 안 보이면 null." }
+        },
+        "required": ["항목", "금액"]
+      }
+    },
+    "총사용금액": { "type": ["integer", "null"], "description": "총사용금액/청구금액(콤마·원 제외 정수). 없으면 null." },
+    "차감금액":   { "type": ["integer", "null"], "description": "차감/감면 금액(콤마·원 제외 정수). 없으면 null." },
+    "납부금액":   { "type": ["integer", "null"], "description": "최종 납부금액(콤마·원 제외 정수). 없으면 null." },
+    "납부기한":   { "type": ["string", "null"], "description": "납부기한/납기일(예: 2026.03.31). 없으면 null." },
+    "전자납부번호": { "type": ["string", "null"], "description": "전자납부번호. 하이픈 포함 형식 그대로. 없으면 null." }
+  },
+  "required": [
+    "문서종류", "통화", "발행기관", "요금종류", "청구연월", "납부자명", "고객번호",
+    "납부자주소", "업종", "사용기간", "사용량", "요금내역",
+    "총사용금액", "차감금액", "납부금액", "납부기한", "전자납부번호"
+  ]
+}

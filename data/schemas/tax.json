@@ -1,0 +1,76 @@
+{
+  "type": "object",
+  "properties": {
+    "문서종류": {
+      "type": ["string", "null"],
+      "description": "이 증빙의 종류. 문서 제목·형식으로 의미 판단: 세금계산서 / 전자세금계산서 / 수정세금계산서 / 계산서 / 기타 중 하나. 판단 불가면 null."
+    },
+    "통화": {
+      "type": ["string", "null"],
+      "description": "금액의 통화. ISO 4217 코드(KRW/USD/JPY/EUR 등). 화폐기호·표기로 판단. 통화 단서가 전혀 없으면 한국 세금계산서이므로 KRW."
+    },
+    "승인번호": { "type": ["string", "null"], "description": "전자세금계산서 승인번호. 하이픈 포함 형식 그대로. 없으면 null." },
+    "관리번호": { "type": ["string", "null"], "description": "관리번호. 없으면 null." },
+    "작성일자": { "type": ["string", "null"], "description": "작성일자(예: 2026-05-06). 없으면 null." },
+    "공급자": {
+      "type": "object",
+      "description": "공급자(파는 쪽) 정보.",
+      "properties": {
+        "등록번호": { "type": ["string", "null"], "description": "사업자등록번호. 하이픈 포함 그대로." },
+        "상호": { "type": ["string", "null"], "description": "상호(법인명)." },
+        "성명": { "type": ["string", "null"], "description": "대표자 성명." },
+        "사업장주소": { "type": ["string", "null"], "description": "사업장 주소." },
+        "업태": { "type": ["string", "null"], "description": "업태." },
+        "종목": { "type": ["string", "null"], "description": "종목." },
+        "이메일": { "type": ["string", "null"], "description": "이메일." }
+      },
+      "required": ["등록번호", "상호", "성명", "사업장주소", "업태", "종목", "이메일"]
+    },
+    "공급받는자": {
+      "type": "object",
+      "description": "공급받는자(사는 쪽) 정보.",
+      "properties": {
+        "등록번호": { "type": ["string", "null"], "description": "사업자등록번호. 하이픈 포함 그대로." },
+        "상호": { "type": ["string", "null"], "description": "상호(법인명)." },
+        "성명": { "type": ["string", "null"], "description": "대표자 성명." },
+        "사업장주소": { "type": ["string", "null"], "description": "사업장 주소." },
+        "업태": { "type": ["string", "null"], "description": "업태." },
+        "종목": { "type": ["string", "null"], "description": "종목." },
+        "이메일": { "type": ["string", "null"], "description": "이메일. 두 개면 첫 번째." }
+      },
+      "required": ["등록번호", "상호", "성명", "사업장주소", "업태", "종목", "이메일"]
+    },
+    "공급가액": { "type": ["integer", "null"], "description": "상단 합계 공급가액(콤마·원 제외 정수). 없으면 null." },
+    "세액": { "type": ["integer", "null"], "description": "상단 합계 세액(콤마·원 제외 정수). 없으면 null." },
+    "수정사유": { "type": ["string", "null"], "description": "수정사유. 없으면 null." },
+    "비고": { "type": ["string", "null"], "description": "비고란 내용. 없으면 null." },
+    "품목": {
+      "type": "array",
+      "description": "품목 명세 행. 화면 품목표의 각 행.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "월": { "type": ["string", "null"], "description": "거래 월(MM)." },
+          "일": { "type": ["string", "null"], "description": "거래 일(DD)." },
+          "품목": { "type": ["string", "null"], "description": "품목명." },
+          "규격": { "type": ["string", "null"], "description": "규격. 없으면 null." },
+          "수량": { "type": ["integer", "null"], "description": "수량." },
+          "단가": { "type": ["integer", "null"], "description": "단가." },
+          "공급가액": { "type": ["integer", "null"], "description": "행 공급가액." },
+          "세액": { "type": ["integer", "null"], "description": "행 세액." }
+        },
+        "required": ["월", "일", "품목", "규격", "수량", "단가", "공급가액", "세액"]
+      }
+    },
+    "합계금액": { "type": ["integer", "null"], "description": "합계금액(공급가액+세액, 콤마·원 제외 정수). 없으면 null." },
+    "현금": { "type": ["integer", "null"], "description": "현금. 없으면 null." },
+    "수표": { "type": ["integer", "null"], "description": "수표. 없으면 null." },
+    "어음": { "type": ["integer", "null"], "description": "어음. 없으면 null." },
+    "외상미수금": { "type": ["integer", "null"], "description": "외상미수금. 없으면 null." }
+  },
+  "required": [
+    "문서종류", "통화", "승인번호", "관리번호", "작성일자", "공급자", "공급받는자",
+    "공급가액", "세액", "수정사유", "비고", "품목", "합계금액",
+    "현금", "수표", "어음", "외상미수금"
+  ]
+}

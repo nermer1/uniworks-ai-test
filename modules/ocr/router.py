@@ -1,7 +1,7 @@
-"""POST /ocr — 인증→권한→추출→원장 기록. 응답은 코어 envelope(success/ApiError)로 통일.
+"""POST /ocr — 인증→권한→(문서종류별/자동분류)추출→원장 기록. 응답은 코어 envelope.
 
-모듈은 인증/모델선택/과금을 '모른다'. 코어가 준 Principal만 받고,
-프롬프트·모델 호출은 코어를 통하며, 처리 수량(페이지 수)만 원장에 보고한다.
+doc_type: card/jiro/tax 명시 또는 'auto'(분류 LLM이 종류 판정 후 추출).
+PDF는 페이지마다 extract_one → auto면 페이지별로 종류가 달라도 됨(뒤섞인 증빙 PDF 대응).
 """
 from fastapi import APIRouter, UploadFile, File, Form, Depends
 
@@ -22,22 +22,26 @@ _TOKEN_KEYS = ("prompt_tokens", "completion_tokens", "total_tokens")
 def ocr(
     file: UploadFile = File(...),
     model: str = Form(default=""),
+    doc_type: str = Form(default="card"),
     principal: Principal = Depends(require_capability("ocr")),
 ):
     alias = model or default_model()
-    check_model(principal, alias)   # 이 키가 이 모델 쓸 수 있나
+    check_model(principal, alias)
+    if doc_type != "auto" and doc_type not in extract.valid_doc_types():
+        raise ApiError("INVALID_DOC_TYPE",
+                       f"문서종류는 {extract.valid_doc_types() + ['auto']} 중 하나여야 합니다", status=400)
 
     data = file.file.read()
     mime = file.content_type or "image/jpeg"
 
     if pdf.is_pdf(data, mime):
-        return _process_pdf(data, alias, principal)
-    return _process_image(data, mime, alias, principal)
+        return _process_pdf(data, alias, doc_type, principal)
+    return _process_image(data, mime, alias, doc_type, principal)
 
 
-def _process_image(data: bytes, mime: str, alias: str, principal: Principal):
+def _process_image(data: bytes, mime: str, alias: str, doc_type: str, principal: Principal):
     try:
-        result, out = extract.format_image(data, mime, alias)
+        payload, out = extract.extract_one(data, mime, alias, doc_type)
     except Exception as e:
         ledger.append(principal.tenant, "ocr", 1, "page", "-", alias, ok=False, meta={"error": str(e)})
         raise ApiError("OCR_FAILED", f"OCR 처리 실패: {e}", status=502)
@@ -45,16 +49,16 @@ def _process_image(data: bytes, mime: str, alias: str, principal: Principal):
     ledger.append(
         principal.tenant, "ocr", 1, "page",
         out.get("provider", "-"), out.get("model", alias),
-        ok=True, meta={"tokens": out.get("usage", {})},
+        ok=True, meta={"tokens": out.get("usage", {}), "doc_type": payload["doc_type"]},
     )
     return success(
-        {"result": result},
+        payload,   # {doc_type, result}
         usage={"pages": 1, "provider": out.get("provider"),
                "model": out.get("model"), "tokens": out.get("usage", {})},
     )
 
 
-def _process_pdf(data: bytes, alias: str, principal: Principal):
+def _process_pdf(data: bytes, alias: str, doc_type: str, principal: Principal):
     try:
         page_images = pdf.render_pages(data)
     except Exception as e:
@@ -68,23 +72,23 @@ def _process_pdf(data: bytes, alias: str, principal: Principal):
     model_name = alias
     for i, png in enumerate(page_images):
         try:
-            result, out = extract.format_image(png, "image/png", alias)
+            payload, out = extract.extract_one(png, "image/png", alias, doc_type)
             provider = out.get("provider", provider)
             model_name = out.get("model", alias)
             usage = out.get("usage", {})
             for k in _TOKEN_KEYS:
                 totals[k] += usage.get(k, 0) or 0
-            pages.append({"page_index": i, "result": result, "ok": True})
+            pages.append({"page_index": i, "doc_type": payload["doc_type"],
+                          "result": payload["result"], "ok": True})
         except Exception as e:
-            pages.append({"page_index": i, "result": None, "ok": False, "error": str(e)})
+            pages.append({"page_index": i, "doc_type": None, "result": None, "ok": False, "error": str(e)})
 
     n = len(page_images)
-    # 페이지 수만큼 quantity 기록 (= 페이지당 과금 근거).
     ledger.append(
         principal.tenant, "ocr", n, "page", provider, model_name,
-        ok=True, meta={"tokens": totals, "pages": n},
+        ok=True, meta={"tokens": totals, "pages": n, "doc_type": doc_type},
     )
     return success(
-        {"is_pdf": True, "page_count": n, "pages": pages},
+        {"is_pdf": True, "doc_type": doc_type, "page_count": n, "pages": pages},
         usage={"pages": n, "provider": provider, "model": model_name, "tokens": totals},
     )

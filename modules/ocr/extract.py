@@ -1,59 +1,105 @@
-"""이미지 → 정형 JSON. 모델 호출은 반드시 core.model_gateway를 통한다(provider 무지).
+"""이미지 → 정형 JSON. 문서종류별 스키마/프롬프트(파일) + 자동분류(auto).
 
-B의 실측 함정 반영:
- #1 response_format json_schema로 강제 (guided_json 아님)
- #2 모든 필드를 required 에 (빠지면 값이 있어도 LLM이 생략)
+종류 추가 = DOC_TYPES 한 줄 + data/schemas/<type>.json + data/prompts/ocr_<type>.txt.
+auto = 분류 LLM(enum)로 종류 판정 후 그 종류로 추출 (LLM 2콜: 분류+추출).
+B 실측 함정: #1 response_format json_schema, #2 전 필드 required.
 """
-import base64
 import json
+import base64
 
+from core.config import DATA_DIR
 from core import model_gateway, prompt_store
 
-# B 함정 #2: 전 필드 required (없으면 null로라도 항상 출력하게 강제).
-# 숫자 코드성 필드(사업자번호·승인번호·가맹점번호 등)는 string — 앞자리 0·하이픈·마스킹 보존.
-# 금액은 integer.
-CARD_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "가맹점명":   {"type": ["string", "null"]},
-        "사업자번호": {"type": ["string", "null"]},
-        "대표자명":   {"type": ["string", "null"]},
-        "가맹점번호": {"type": ["string", "null"]},   # 앞자리 0 있음 → 문자열
-        "사업자주소": {"type": ["string", "null"]},
-        "전화번호":   {"type": ["string", "null"]},
-        "거래일시":   {"type": ["string", "null"]},   # 날짜+시각
-        "승인상태":   {"type": ["string", "null"]},
-        "결제방법":   {"type": ["string", "null"]},   # 일시불/할부
-        "승인번호":   {"type": ["string", "null"]},
-        "공급가액":   {"type": ["integer", "null"]},
-        "부가세":     {"type": ["integer", "null"]},
-        "봉사료":     {"type": ["integer", "null"]},
-        "총액":       {"type": ["integer", "null"]},
-    },
-    "required": [
-        "가맹점명", "사업자번호", "대표자명", "가맹점번호", "사업자주소", "전화번호",
-        "거래일시", "승인상태", "결제방법", "승인번호",
-        "공급가액", "부가세", "봉사료", "총액",
-    ],
+SCHEMA_DIR = DATA_DIR / "schemas"
+
+# 문서종류 레지스트리 — 값=프롬프트 파일명. 스키마는 data/schemas/<type>.json (규칙).
+DOC_TYPES = {
+    "card": {"prompt": "ocr_card"},
+    "jiro": {"prompt": "ocr_jiro"},
+    "tax":  {"prompt": "ocr_tax"},
 }
 
+# 분류 라벨(enum) → doc_type. '기타'는 추출 안 함(None).
+# 분류 스키마 enum은 이 키들로 코드에서 생성 → DOC_TYPES/라우팅과 항상 동기(수동 sync 불필요).
+CLASSIFY_MAP = {
+    "카드현금영수증": "card",
+    "지로영수증": "jiro",
+    "세금계산서": "tax",
+    "기타": None,
+}
+_CLASSIFY_SCHEMA = {
+    "type": "object",
+    "properties": {"문서종류": {"type": "string", "enum": list(CLASSIFY_MAP.keys())}},
+    "required": ["문서종류"],
+}
+_TOKEN_KEYS = ("prompt_tokens", "completion_tokens", "total_tokens")
 
-def format_image(image_bytes: bytes, mime: str, alias: str, prompt_name: str = "ocr_card"):
-    """(result_dict, gateway_out) 반환. gateway_out엔 provider/model/usage 포함."""
+
+def valid_doc_types() -> list[str]:
+    return list(DOC_TYPES.keys())
+
+
+def _load_schema(doc_type: str) -> dict:
+    """data/schemas/<type>.json 을 호출 시점에 로드 (편집 즉시 반영)."""
+    return json.loads((SCHEMA_DIR / f"{doc_type}.json").read_text(encoding="utf-8"))
+
+
+def _messages(image_bytes: bytes, mime: str, prompt: str) -> list:
     data_uri = f"data:{mime};base64," + base64.b64encode(image_bytes).decode("ascii")
-    prompt = prompt_store.get(prompt_name)
-    messages = [{
+    return [{
         "role": "user",
         "content": [
             {"type": "text", "text": prompt},
             {"type": "image_url", "image_url": {"url": data_uri}},
         ],
     }]
-    # 스키마만 넘기고, 실제 response_format 구성은 gateway가 모델 config에 맞춰 결정.
-    out = model_gateway.call(alias, messages, json_schema=CARD_SCHEMA, schema_name="card_receipt")
+
+
+def format_image(image_bytes: bytes, mime: str, alias: str, doc_type: str = "card"):
+    """(result_dict, gateway_out) — 지정 doc_type 스키마로 추출."""
+    spec = DOC_TYPES[doc_type]
+    schema = _load_schema(doc_type)
+    prompt = prompt_store.get(spec["prompt"])
+    out = model_gateway.call(alias, _messages(image_bytes, mime, prompt),
+                             json_schema=schema, schema_name=f"{doc_type}_result")
     content = out.get("content")
     try:
         result = json.loads(content)
     except (json.JSONDecodeError, TypeError):
-        result = {"_raw": content}   # 평문이면 감싸서 반환 (B와 동일)
+        result = {"_raw": content}
     return result, out
+
+
+def classify(image_bytes: bytes, mime: str, alias: str):
+    """이미지 → (doc_type|None, gateway_out). None은 '기타'(추출 안 함). 분류 LLM 1콜."""
+    prompt = prompt_store.get("ocr_classify")
+    out = model_gateway.call(alias, _messages(image_bytes, mime, prompt),
+                             json_schema=_CLASSIFY_SCHEMA, schema_name="doc_classify")
+    try:
+        label = json.loads(out.get("content")).get("문서종류")
+    except (json.JSONDecodeError, TypeError, AttributeError):
+        label = None
+    return CLASSIFY_MAP.get(label), out
+
+
+def _merge_usage(a: dict, b: dict) -> dict:
+    """두 콜(분류+추출)의 usage 합산. provider/model은 추출 쪽(b) 기준."""
+    ua, ub = a.get("usage", {}), b.get("usage", {})
+    usage = {k: (ua.get(k, 0) or 0) + (ub.get(k, 0) or 0) for k in _TOKEN_KEYS}
+    return {"provider": b.get("provider"), "model": b.get("model"), "usage": usage}
+
+
+def extract_one(image_bytes: bytes, mime: str, alias: str, doc_type: str):
+    """(payload, gateway_out) 반환. payload = {doc_type, result}.
+
+    doc_type='auto' → 분류 후 종류별 추출(2콜). '기타'면 result=None(사람 검토).
+    """
+    if doc_type == "auto":
+        detected, c_out = classify(image_bytes, mime, alias)
+        if detected is None:
+            return {"doc_type": None, "result": None}, c_out       # 기타 → 추출 생략
+        result, e_out = format_image(image_bytes, mime, alias, detected)
+        return {"doc_type": detected, "result": result}, _merge_usage(c_out, e_out)
+
+    result, out = format_image(image_bytes, mime, alias, doc_type)
+    return {"doc_type": doc_type, "result": result}, out
