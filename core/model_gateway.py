@@ -4,10 +4,10 @@
 mock provider는 litellm 없이 도는 오프라인 테스트용(pytest가 이걸로 네트워크 없이 통과).
 
 config 별칭 예:
-  card-mock:       {provider: mock}
-  card-commercial: {provider: litellm, model: "gemini/gemini-2.5-flash", api_key_env: GEMINI_API_KEY}
-  card-vertex:     {provider: litellm, model: "vertex_ai/gemini-2.5-flash", vertex_project:..., vertex_location:...}
-  card-9b(자체):   {provider: litellm, model: "openai/qwen2.5-vl", base_url: "http://.../v1"}  # OpenAI 호환 vLLM
+  mock:   {provider: mock}
+  gemini: {provider: litellm, model: "gemini/gemini-2.5-flash", api_key_env: GEMINI_API_KEY}
+  vertex: {provider: litellm, model: "vertex_ai/gemini-2.5-flash", vertex_project:..., vertex_location:...}
+  vllm:   {provider: litellm, model: "openai/qwen2.5-vl", base_url: "http://.../v1"}  # 자체 OpenAI 호환
 """
 import os
 import json

@@ -23,7 +23,7 @@ def main():
     key_id = uuid.uuid4().hex[:8]
     capabilities = {
         "features": ["ocr", "recommend", "admin"],
-        "models": ["card-mock", "card-9b", "card-commercial", "card-vertex"],
+        "models": ["mock", "vllm", "gemini", "vertex"],
     }
     conn = connect()
     try:

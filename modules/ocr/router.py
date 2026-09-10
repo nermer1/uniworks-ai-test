@@ -46,16 +46,17 @@ def _process_image(data: bytes, mime: str, alias: str, doc_type: str, principal:
         ledger.append(principal.tenant, "ocr", 1, "page", "-", alias, ok=False, meta={"error": str(e)})
         raise ApiError("OCR_FAILED", f"OCR 처리 실패: {e}", status=502)
 
+    usage = {"pages": 1, "provider": out.get("provider"), "model": out.get("model"),
+             "tokens": out.get("usage", {}), "ms": out.get("ms")}
+    if out.get("classify_ms") is not None:                 # auto면 분류/추출 분해
+        usage["classify_ms"] = out["classify_ms"]
+        usage["extract_ms"] = out["extract_ms"]
     ledger.append(
         principal.tenant, "ocr", 1, "page",
         out.get("provider", "-"), out.get("model", alias),
-        ok=True, meta={"tokens": out.get("usage", {}), "doc_type": payload["doc_type"]},
+        ok=True, meta={"tokens": out.get("usage", {}), "doc_type": payload["doc_type"], "ms": out.get("ms")},
     )
-    return success(
-        payload,   # {doc_type, result}
-        usage={"pages": 1, "provider": out.get("provider"),
-               "model": out.get("model"), "tokens": out.get("usage", {})},
-    )
+    return success(payload, usage=usage)
 
 
 def _process_pdf(data: bytes, alias: str, doc_type: str, principal: Principal):
@@ -68,6 +69,7 @@ def _process_pdf(data: bytes, alias: str, doc_type: str, principal: Principal):
 
     pages = []
     totals = {k: 0 for k in _TOKEN_KEYS}
+    total_ms = 0
     provider = alias
     model_name = alias
     for i, png in enumerate(page_images):
@@ -78,17 +80,18 @@ def _process_pdf(data: bytes, alias: str, doc_type: str, principal: Principal):
             usage = out.get("usage", {})
             for k in _TOKEN_KEYS:
                 totals[k] += usage.get(k, 0) or 0
+            total_ms += out.get("ms", 0) or 0
             pages.append({"page_index": i, "doc_type": payload["doc_type"],
-                          "result": payload["result"], "ok": True})
+                          "result": payload["result"], "ms": out.get("ms"), "ok": True})
         except Exception as e:
             pages.append({"page_index": i, "doc_type": None, "result": None, "ok": False, "error": str(e)})
 
     n = len(page_images)
     ledger.append(
         principal.tenant, "ocr", n, "page", provider, model_name,
-        ok=True, meta={"tokens": totals, "pages": n, "doc_type": doc_type},
+        ok=True, meta={"tokens": totals, "pages": n, "doc_type": doc_type, "ms": total_ms},
     )
     return success(
         {"is_pdf": True, "doc_type": doc_type, "page_count": n, "pages": pages},
-        usage={"pages": n, "provider": provider, "model": model_name, "tokens": totals},
+        usage={"pages": n, "provider": provider, "model": model_name, "tokens": totals, "ms": total_ms},
     )

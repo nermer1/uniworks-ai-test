@@ -1,24 +1,24 @@
 {
   "enabled_modules": ["ocr", "recommend"],
-  "default_model": "card-mock",
+  "default_model": "mock",
   "models": {
-    "card-mock": {
+    "mock": {
       "provider": "mock"
     },
-    "card-9b": {
+    "vllm": {
       "provider": "litellm",
       "model": "openai/qwen2.5-vl",
       "base_url": "http://REPLACE-ME:8000/v1",
       "structured_output": "json_schema"
     },
-    "card-commercial": {
+    "gemini": {
       "provider": "litellm",
       "model": "gemini/gemini-2.5-flash",
       "api_key_env": "GEMINI_API_KEY",
       "structured_output": "json_schema",
       "reasoning_effort": "low"
     },
-    "card-vertex": {
+    "vertex": {
       "provider": "litellm",
       "model": "vertex_ai/gemini-2.5-flash",
       "vertex_project": "vertex-ai-user-505201",

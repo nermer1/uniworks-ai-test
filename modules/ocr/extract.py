@@ -5,6 +5,7 @@ auto = 분류 LLM(enum)로 종류 판정 후 그 종류로 추출 (LLM 2콜: 분
 B 실측 함정: #1 response_format json_schema, #2 전 필드 required.
 """
 import json
+import time
 import base64
 
 from core.config import DATA_DIR
@@ -60,8 +61,10 @@ def format_image(image_bytes: bytes, mime: str, alias: str, doc_type: str = "car
     spec = DOC_TYPES[doc_type]
     schema = _load_schema(doc_type)
     prompt = prompt_store.get(spec["prompt"])
+    t0 = time.perf_counter()
     out = model_gateway.call(alias, _messages(image_bytes, mime, prompt),
                              json_schema=schema, schema_name=f"{doc_type}_result")
+    out["ms"] = round((time.perf_counter() - t0) * 1000)
     content = out.get("content")
     try:
         result = json.loads(content)
@@ -73,8 +76,10 @@ def format_image(image_bytes: bytes, mime: str, alias: str, doc_type: str = "car
 def classify(image_bytes: bytes, mime: str, alias: str):
     """이미지 → (doc_type|None, gateway_out). None은 '기타'(추출 안 함). 분류 LLM 1콜."""
     prompt = prompt_store.get("ocr_classify")
+    t0 = time.perf_counter()
     out = model_gateway.call(alias, _messages(image_bytes, mime, prompt),
                              json_schema=_CLASSIFY_SCHEMA, schema_name="doc_classify")
+    out["ms"] = round((time.perf_counter() - t0) * 1000)
     try:
         label = json.loads(out.get("content")).get("문서종류")
     except (json.JSONDecodeError, TypeError, AttributeError):
@@ -86,7 +91,11 @@ def _merge_usage(a: dict, b: dict) -> dict:
     """두 콜(분류+추출)의 usage 합산. provider/model은 추출 쪽(b) 기준."""
     ua, ub = a.get("usage", {}), b.get("usage", {})
     usage = {k: (ua.get(k, 0) or 0) + (ub.get(k, 0) or 0) for k in _TOKEN_KEYS}
-    return {"provider": b.get("provider"), "model": b.get("model"), "usage": usage}
+    return {
+        "provider": b.get("provider"), "model": b.get("model"), "usage": usage,
+        "ms": (a.get("ms", 0) or 0) + (b.get("ms", 0) or 0),   # 분류+추출 총시간
+        "classify_ms": a.get("ms"), "extract_ms": b.get("ms"),
+    }
 
 
 def extract_one(image_bytes: bytes, mime: str, alias: str, doc_type: str):

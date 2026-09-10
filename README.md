@@ -64,9 +64,10 @@ curl -H "X-API-Key: KEY" http://localhost:8080/core/usage
 ## provider 토글 (Stage 2 미리보기)
 
 `config/app.config.json`의 `default_model`을 바꾸면 코드 수정 없이 백엔드가 갈림:
-- `card-mock` — 로컬 목업 (기본, 모델 불필요)
-- `card-9b` — 자체 vLLM (OpenAI 호환) `base_url` 넣으면 사용
-- `card-commercial` — 상용 API (`OPENAI_API_KEY` 환경변수 사용)
+- `mock` — 로컬 목업 (기본, 모델 불필요)
+- `vllm` — 자체 vLLM (OpenAI 호환) `base_url` 넣으면 사용
+- `gemini` — 상용 (Gemini AI Studio, `GEMINI_API_KEY`)
+- `vertex` — Vertex AI (GCP 서비스계정)
 
 이게 "옵션만 토글" 의 실체. `model_gateway.py`를 litellm으로 교체하면 provider가 더 늘어남.
 

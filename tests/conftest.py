@@ -26,14 +26,14 @@ def client():
 
 @pytest.fixture
 def api_key():
-    """features=ocr/recommend/admin, models=card-mock 만 허용하는 테스트 키."""
+    """features=ocr/recommend/admin, models=mock 만 허용하는 테스트 키."""
     raw = "sk-test-key"
     conn = connect()
     conn.execute(
         "INSERT OR REPLACE INTO api_keys (id, key_hash, tenant, capabilities, is_active, created_at)"
         " VALUES (?, ?, ?, ?, 1, ?)",
         ("k-test", hash_key(raw), "test-corp",
-         json.dumps({"features": ["ocr", "recommend", "admin"], "models": ["card-mock"]}),
+         json.dumps({"features": ["ocr", "recommend", "admin"], "models": ["mock"]}),
          datetime.now(timezone.utc).isoformat()),
     )
     conn.commit(); conn.close()

@@ -1,4 +1,4 @@
-"""코어 계약 — envelope, 인증, 모델 권한, OCR(mock). 네트워크/모델 불필요(card-mock)."""
+"""코어 계약 — envelope, 인증, 모델 권한, OCR(mock). 네트워크/모델 불필요(mock)."""
 
 
 def test_health_envelope(client):
@@ -21,7 +21,7 @@ def test_ocr_requires_key(client):
 
 def test_ocr_mock_success(client, api_key):
     r = client.post("/ocr", headers={"X-API-Key": api_key},
-                    data={"model": "card-mock"},
+                    data={"model": "mock"},
                     files={"file": ("t.png", b"x", "image/png")})
     assert r.status_code == 200
     body = r.json()
@@ -31,9 +31,9 @@ def test_ocr_mock_success(client, api_key):
 
 
 def test_ocr_model_forbidden(client, api_key):
-    # 키는 card-mock만 허용 → card-vertex 요청은 403
+    # 키는 mock만 허용 → vertex 요청은 403
     r = client.post("/ocr", headers={"X-API-Key": api_key},
-                    data={"model": "card-vertex"},
+                    data={"model": "vertex"},
                     files={"file": ("t.png", b"x", "image/png")})
     assert r.status_code == 403
     assert r.json()["error"]["code"] == "FORBIDDEN"
