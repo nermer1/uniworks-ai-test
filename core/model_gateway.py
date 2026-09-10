@@ -1,11 +1,16 @@
-"""모델 게이트웨이 — 자체 vLLM ↔ 상용 API ↔ mock 을 config로 스위치.
+"""모델 게이트웨이 — litellm로 provider 무관 호출. config 별칭 → litellm 모델 문자열.
 
-모듈은 이 call() 하나만 쓴다. provider 분기는 여기 한 곳에만 있어서
-config의 default_model만 바꾸면 백엔드가 갈린다(= "옵션만 토글").
-Stage 2에서 이 파일을 litellm 호출로 갈아끼우면 provider가 더 늘어난다(인터페이스 동일).
+모듈은 call() 하나만 쓴다(provider 무지). provider 교체 = config 별칭의 model 문자열만 변경.
+mock provider는 litellm 없이 도는 오프라인 테스트용(pytest가 이걸로 네트워크 없이 통과).
+
+config 별칭 예:
+  card-mock:       {provider: mock}
+  card-commercial: {provider: litellm, model: "gemini/gemini-2.5-flash", api_key_env: GEMINI_API_KEY}
+  card-vertex:     {provider: litellm, model: "vertex_ai/gemini-2.5-flash", vertex_project:..., vertex_location:...}
+  card-9b(자체):   {provider: litellm, model: "openai/qwen2.5-vl", base_url: "http://.../v1"}  # OpenAI 호환 vLLM
 """
+import os
 import json
-import httpx
 
 from core.config import get_model_config
 
@@ -14,37 +19,22 @@ class ModelError(Exception):
     pass
 
 
-def _post_json(url: str, payload: dict, headers: dict, timeout: int) -> dict:
-    """POST 후 4xx/5xx면 응답 본문까지 담아 에러 — 진짜 원인(어느 파라미터가 문제인지)을 보이게."""
-    r = httpx.post(url, json=payload, headers=headers, timeout=timeout)
-    if r.status_code >= 400:
-        raise ModelError(f"{r.status_code} {r.reason_phrase}: {r.text[:800]}")
-    return r.json()
-
-
 def call(alias: str, messages: list, json_schema: dict | None = None,
          schema_name: str = "result", timeout: int = 120) -> dict:
-    """{content, provider, model, usage} 반환. messages는 OpenAI chat 형식.
-
-    구조화 출력 방식은 모델별 config의 structured_output이 결정한다(provider 차이를
-    코드가 아니라 설정으로 흡수) — 'json_schema'(기본) / 'json_object' / 'none'.
-    """
+    """{content, provider, model, usage} 반환. messages는 OpenAI chat 형식."""
     cfg = get_model_config(alias)
     provider = cfg.get("provider")
     if provider == "mock":
         return _mock(alias)
-    if provider == "openai_compat":
+    if provider == "litellm":
         response_format = _build_response_format(cfg, json_schema, schema_name)
-        return _openai_compat(cfg, messages, response_format, timeout)
-    if provider == "vertex":
-        response_format = _build_response_format(cfg, json_schema, schema_name)
-        return _vertex(cfg, messages, response_format, timeout)
+        return _litellm(cfg, messages, response_format, timeout)
     raise ModelError(f"알 수 없는 provider: {provider}")
 
 
 def _build_response_format(cfg: dict, json_schema: dict | None, schema_name: str) -> dict | None:
-    """provider별 구조화 출력 방식. vLLM은 json_schema를 먹지만 상용은 제각각이라
-    config로 스위치한다. json_schema가 안 먹는 provider면 'json_object'나 'none'으로.
+    """구조화 출력 방식 — provider 차이는 config로 흡수(litellm이 provider별 매핑 처리).
+    'json_schema'(기본) / 'json_object' / 'none'.
     """
     mode = cfg.get("structured_output", "json_schema")
     if mode == "json_schema" and json_schema:
@@ -54,72 +44,44 @@ def _build_response_format(cfg: dict, json_schema: dict | None, schema_name: str
     return None
 
 
-def _build_payload(cfg: dict, messages: list, response_format: dict | None) -> dict:
-    """chat/completions payload 공통 조립 (openai_compat·vertex 공유).
-
-    reasoning_effort: config에 있으면 실음 — 'none'이면 thinking OFF(추출은 생각 불필요 →
-    비용·지연 절감. 레퍼런스 univision도 추출 노선은 thinking OFF로 수렴).
-    """
-    payload = {"model": cfg["model"], "messages": messages}
-    if response_format:
-        # B 함정 #1: guided_json 아님. OpenAI 표준 response_format(json_schema)만 강제됨.
-        payload["response_format"] = response_format
-    effort = cfg.get("reasoning_effort")
-    if effort is not None:
-        payload["reasoning_effort"] = effort
-    return payload
-
-
-def _openai_compat(cfg: dict, messages: list, response_format: dict | None, timeout: int) -> dict:
-    base = cfg["base_url"].rstrip("/")
-    headers = {"Content-Type": "application/json"}
-    if cfg.get("api_key"):
-        headers["Authorization"] = f"Bearer {cfg['api_key']}"
-    payload = _build_payload(cfg, messages, response_format)
-    data = _post_json(f"{base}/chat/completions", payload, headers, timeout)
-    return {
-        "content": data["choices"][0]["message"]["content"],
-        "provider": cfg["provider"],
-        "model": cfg["model"],
-        "usage": data.get("usage", {}),
-    }
-
-
-def _vertex(cfg: dict, messages: list, response_format: dict | None, timeout: int) -> dict:
-    """Vertex AI (GCP) — OpenAI 호환 엔드포인트. 인증은 ADC로 토큰 자동 발급·갱신.
-
-    사전 준비:
-      1) uv pip install google-auth
-      2) gcloud auth application-default login   (또는 GOOGLE_APPLICATION_CREDENTIALS=서비스계정.json)
-      3) config에 project_id / location 설정, model은 'google/gemini-2.5-flash' 형태
-    """
+def _litellm(cfg: dict, messages: list, response_format: dict | None, timeout: int) -> dict:
     try:
-        import google.auth
-        import google.auth.transport.requests  # 이 모듈은 requests 패키지도 필요
-    except ImportError as e:
-        raise ModelError(f"Vertex 의존성 누락({e}). uv pip install google-auth requests")
+        import litellm
+    except ImportError:
+        raise ModelError("litellm 필요: uv pip install litellm")
 
-    creds, _ = google.auth.default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
-    creds.refresh(google.auth.transport.requests.Request())  # 만료됐으면 자동 갱신
+    kwargs = {"model": cfg["model"], "messages": messages, "timeout": timeout}
+    if response_format:
+        kwargs["response_format"] = response_format
+    if cfg.get("reasoning_effort") is not None:
+        kwargs["reasoning_effort"] = cfg["reasoning_effort"]
+    if cfg.get("base_url"):                       # 자체 vLLM 등 OpenAI 호환 엔드포인트
+        kwargs["api_base"] = cfg["base_url"]
+    if cfg.get("api_key_env"):                    # 없으면 litellm이 표준 env를 알아서 읽음
+        key = os.environ.get(cfg["api_key_env"])
+        if key:
+            kwargs["api_key"] = key
+    if cfg.get("vertex_project"):                 # vertex_ai 전용
+        kwargs["vertex_project"] = cfg["vertex_project"]
+    if cfg.get("vertex_location"):
+        kwargs["vertex_location"] = cfg["vertex_location"]
 
-    project = cfg["project_id"]
-    location = cfg.get("location", "global")
-    host = "aiplatform.googleapis.com" if location == "global" else f"{location}-aiplatform.googleapis.com"
-    base = f"https://{host}/v1/projects/{project}/locations/{location}/endpoints/openapi"
+    resp = litellm.completion(**kwargs)           # API 에러는 상위(라우터)에서 잡아 ApiError로
 
-    headers = {"Authorization": f"Bearer {creds.token}", "Content-Type": "application/json"}
-    payload = _build_payload(cfg, messages, response_format)
-    data = _post_json(f"{base}/chat/completions", payload, headers, timeout)
-    return {
-        "content": data["choices"][0]["message"]["content"],
-        "provider": "vertex",
-        "model": cfg["model"],
-        "usage": data.get("usage", {}),
+    content = resp.choices[0].message.content
+    u = getattr(resp, "usage", None)
+    usage = {
+        "prompt_tokens": getattr(u, "prompt_tokens", 0) or 0,
+        "completion_tokens": getattr(u, "completion_tokens", 0) or 0,
+        "total_tokens": getattr(u, "total_tokens", 0) or 0,
     }
+    model = cfg["model"]
+    provider = model.split("/")[0] if "/" in model else "litellm"   # 원장 provider = 'gemini'/'vertex_ai'/'openai'...
+    return {"content": content, "provider": provider, "model": model, "usage": usage}
 
 
 def _mock(alias: str) -> dict:
-    """모델 없이 뼈대를 돌리기 위한 목업 응답."""
+    """모델 없이 뼈대를 돌리기 위한 목업 응답 (litellm 불필요)."""
     content = json.dumps(
         {"가맹점명": "목데이터상사", "사업자번호": "123-45-67890",
          "거래일자": "2026-09-07", "총액": 15000},

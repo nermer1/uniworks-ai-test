@@ -1,5 +1,5 @@
-# Vertex AI(GCP) provider 쓰는 배포에서만 설치.
+# vertex_ai provider(litellm) 쓰는 배포에서만 설치 — litellm이 GCP 인증에 사용.
 #   uv pip install -r requirements-vertex.txt
-# Gemini(AI Studio)·OpenAI·Claude 등 OpenAI 호환 provider만 쓰면 이건 불필요.
+# Gemini(AI Studio)·OpenAI·Claude 등만 쓰면 불필요 (litellm이 표준 키로 처리).
 google-auth
 requests      # google.auth.transport.requests가 내부적으로 사용

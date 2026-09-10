@@ -6,24 +6,23 @@
       "provider": "mock"
     },
     "card-9b": {
-      "provider": "openai_compat",
+      "provider": "litellm",
+      "model": "openai/qwen2.5-vl",
       "base_url": "http://REPLACE-ME:8000/v1",
-      "model": "qwen2.5-vl",
       "structured_output": "json_schema"
     },
     "card-commercial": {
-      "provider": "openai_compat",
-      "base_url": "https://generativelanguage.googleapis.com/v1beta/openai",
-      "model": "gemini-2.5-flash",
+      "provider": "litellm",
+      "model": "gemini/gemini-2.5-flash",
       "api_key_env": "GEMINI_API_KEY",
       "structured_output": "json_schema",
       "reasoning_effort": "low"
     },
     "card-vertex": {
-      "provider": "vertex",
-      "project_id": "vertex-ai-user-505201",
-      "location": "global",
-      "model": "google/gemini-2.5-flash",
+      "provider": "litellm",
+      "model": "vertex_ai/gemini-2.5-flash",
+      "vertex_project": "vertex-ai-user-505201",
+      "vertex_location": "global",
       "structured_output": "json_schema",
       "reasoning_effort": "minimal"
     }

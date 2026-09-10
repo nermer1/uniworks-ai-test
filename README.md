@@ -36,7 +36,8 @@ aiplatform/
 ```bash
 py -m pip install -r requirements.txt              # 코어 (항상)
 # 산 것만 추가 설치 (à la carte):
-#   py -m pip install -r requirements-vertex.txt    # Vertex provider 쓰면
+#   py -m pip install -r requirements-ocr.txt       # OCR 모듈 쓰면 (PyMuPDF + litellm)
+#   py -m pip install -r requirements-vertex.txt    # vertex_ai provider 쓰면
 #   py -m pip install -r requirements-recommend.txt # recommend 모듈 쓰면
 py scripts/seed_key.py          # API Key 발급 (한 번만 표시됨 — 복사해둘 것)
 py -m uvicorn app:app --port 8080

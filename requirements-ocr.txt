@@ -1,0 +1,4 @@
+# OCR 모듈 쓰는 배포에서만 설치.
+#   uv pip install -r requirements-ocr.txt
+PyMuPDF==1.27.2.3   # PDF 입력(페이지→이미지) 전처리
+litellm             # 모델 게이트웨이 — provider 무관 LLM 호출(자체 vLLM·Gemini·Claude·Vertex 등)
