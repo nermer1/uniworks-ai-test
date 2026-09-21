@@ -86,6 +86,37 @@
         </div>
       </section>
 
+      <!-- 추천 테스트 (recommend:test) -->
+      <section id="sec-rectest" hidden>
+        <div class="sec-title">추천 테스트</div>
+        <div class="sec-desc">가맹점명·업종으로 계정과목(HKONT) 추천을 확인합니다. 테스트 사용량은 실집계와 분리됩니다.</div>
+        <div class="card" style="margin-bottom:18px">
+          <div class="card-head">입력</div>
+          <div class="card-body">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+              <div class="field"><label>문서 종류</label>
+                <select class="inp" id="rt-formtype">
+                  <option value="CD">CD (법인카드)</option>
+                  <option value="ET">ET (세금계산서·지로)</option>
+                </select>
+              </div>
+              <div class="field"><label>컬렉션</label>
+                <select class="inp" id="rt-collection"></select>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+              <div class="field"><label>가맹점명 (MERCH_NAME)</label>
+                <input class="inp" id="rt-merch" placeholder="예: 스타벅스"></div>
+              <div class="field"><label>업종 (MCC_NAME)</label>
+                <input class="inp" id="rt-mcc" placeholder="예: 커피전문점"></div>
+            </div>
+            <button class="btn btn-primary" id="rt-run">추천 실행</button>
+            <span class="muted" id="rt-status" style="margin-left:12px"></span>
+          </div>
+        </div>
+        <div id="rt-result"></div>
+      </section>
+
       <!-- 사용량 (usage:read) -->
       <section id="sec-usage" hidden>
         <div class="sec-title">사용량</div>

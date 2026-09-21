@@ -13,7 +13,7 @@ const NAV = [
     { id: 'ocrhist', label: '테스트 이력', ico: '📜', perm: 'ocr:test' },
   ] },
   { group: '추천', module: 'recommend', items: [
-    // recommend 화면은 실엔진 작업 때 추가
+    { id: 'rectest', label: '추천 테스트', ico: '🎯', perm: 'recommend:test' },
   ] },
 ];
 
@@ -80,10 +80,76 @@ function showSection(id) {
   document.querySelectorAll('.content section').forEach(s => s.hidden = true);
   $('sec-' + id).hidden = false;
   document.querySelectorAll('#nav a').forEach(a => a.classList.toggle('active', a.dataset.sec === id));
-  const labels = { ocrtest: 'OCR 테스트', ocrhist: '테스트 이력', usage: '사용량', logs: '접근 로그', users: '유저 관리' };
+  const labels = { ocrtest: 'OCR 테스트', ocrhist: '테스트 이력', rectest: '추천 테스트', usage: '사용량', logs: '접근 로그', users: '유저 관리' };
   $('pageTitle').textContent = labels[id];
-  const loaders = { ocrtest: loadOcrTest, ocrhist: loadOcrHistory, usage: loadUsage, logs: loadLogs, users: loadUsers };
+  const loaders = { ocrtest: loadOcrTest, ocrhist: loadOcrHistory, rectest: loadRecTest, usage: loadUsage, logs: loadLogs, users: loadUsers };
   loaders[id]().catch(e => toast(e.message, 'err'));
+}
+
+// ── 추천 테스트 ──
+const FIT_LABEL = { '1': ['추천', 'st-2xx'], '2': ['검토', 'st-4xx'], '3': ['미추천', 'st-5xx'] };
+
+async function loadRecTest() {
+  try {
+    const c = await api('/recommend/test/collections');
+    $('rt-collection').innerHTML = '<option value="">(form_type 자동)</option>' +
+      (c.collections || []).map(x => `<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join('');
+  } catch (e) {
+    $('rt-collection').innerHTML = '<option value="">(form_type 자동)</option>';
+    toast(e.message, 'err');
+  }
+  $('rt-run').onclick = runRecTest;
+}
+
+async function runRecTest() {
+  const merch = $('rt-merch').value.trim();
+  if (!merch) { toast('가맹점명을 입력하세요', 'err'); return; }
+  const q = { MERCH_NAME: merch };
+  const mcc = $('rt-mcc').value.trim(); if (mcc) q.MCC_NAME = mcc;
+  const body = { form_type: $('rt-formtype').value, queries: [q] };
+  const col = $('rt-collection').value; if (col) body.collection = col;
+
+  const btn = $('rt-run'); btn.disabled = true;
+  $('rt-status').textContent = '추천 중…'; $('rt-result').innerHTML = '';
+  try {
+    const res = await fetch('/recommend/test', {
+      method: 'POST', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+    });
+    if (res.status === 401) { location.href = '/login'; return; }
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.error?.message || ('HTTP ' + res.status));
+    renderRecTest(json.data, json.meta.usage);
+    $('rt-status').textContent = '완료';
+  } catch (e) {
+    toast(e.message, 'err'); $('rt-status').textContent = '실패';
+  } finally { btn.disabled = false; }
+}
+
+function renderRecTest(data, u) {
+  const r = (data.results || [])[0];
+  if (!r) { $('rt-result').innerHTML = '<div class="empty">결과 없음</div>'; return; }
+  const [flabel, fclass] = FIT_LABEL[r.FIT_FLAG] || ['-', 'muted'];
+  const cands = (r.ALL_RECOMMENDATIONS || []).map((c, i) => `
+    <tr><td>${i + 1}</td><td class="mono">${escapeHtml(c.HKONT || '')}</td>
+      <td>${escapeHtml(c.HKONT_TXT || '')}</td><td class="mono">${c.SCORE}</td>
+      <td class="mono muted">${c.SCORE_DETAIL ? `sim ${c.SCORE_DETAIL.MAX_SIM} · freq ${c.FREQUENCY ?? '-'}` : ''}</td></tr>`).join('');
+  $('rt-result').innerHTML = `
+    <div class="summary">
+      <div class="sc accent"><div class="l">추천 계정</div><div class="v" style="font-size:18px">${escapeHtml(r.HKONT || '-')}</div></div>
+      <div class="sc"><div class="l">점수</div><div class="v">${r.SCORE}</div></div>
+      <div class="sc"><div class="l">판정</div><div class="v" style="font-size:16px"><span class="${fclass}">${flabel}</span> <span class="muted" style="font-size:11px">${r.CONFIDENCE || ''}</span></div></div>
+      <div class="sc"><div class="l">경과</div><div class="v">${u.ms}ms</div></div>
+    </div>
+    <div class="card" style="margin-bottom:14px"><div class="card-head">추천 · ${escapeHtml(r.HKONT_TXT || '')}</div>
+      <div class="card-body">
+        <div class="mono muted" style="margin-bottom:8px">쿼리: ${escapeHtml(r.query_text || '')}</div>
+        <div style="line-height:1.6">${escapeHtml(r.FIT_REASON || '')}</div>
+      </div></div>
+    <div class="card"><div class="card-head">후보 (ALL_RECOMMENDATIONS)</div>
+      <div class="tbl-wrap"><table class="tbl">
+        <thead><tr><th>#</th><th>계정</th><th>계정명</th><th>점수</th><th>상세</th></tr></thead>
+        <tbody>${cands || emptyRow(5)}</tbody></table></div></div>`;
 }
 
 // ── 테스트 이력 ──

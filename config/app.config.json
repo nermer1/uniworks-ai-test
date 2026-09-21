@@ -1,5 +1,5 @@
 {
-  "enabled_modules": ["ocr"],
+  "enabled_modules": ["ocr", "recommend"],
   "default_model": "mock",
   "ocr": {
     "pdf_zoom": 2.0
