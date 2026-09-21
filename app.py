@@ -8,14 +8,14 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
 from core.logging_setup import setup_logging, get_logger
-from core.config import PROJECT_ROOT
+from core.config import PROJECT_ROOT, enabled_modules
 from core.db import init_db
 from core.monitoring import AccessLogMiddleware, RequestContextMiddleware, recent_logs
 from core.errors import register_error_handlers
 from core.envelope import success
 from core.registry import mount_modules
 from core.permissions import require_permission
-from core.user_auth import User
+from core.user_auth import User, get_current_user
 from core.auth_routes import router as auth_router
 from core.admin_routes import router as admin_router
 from core import ledger
@@ -81,6 +81,12 @@ def usage(user: User = Depends(require_permission("usage:read"))):
 def logs(user: User = Depends(require_permission("logs:read"))):
     """최근 접근 로그 — 개발자 관측 화면이 소비."""
     return success({"logs": recent_logs()})
+
+
+@app.get("/core/modules")
+def modules(user: User = Depends(get_current_user)):
+    """config에서 켜진 기능 모듈 목록 — 콘솔 nav가 모듈별 메뉴 표시 여부에 사용."""
+    return success({"enabled": enabled_modules()})
 
 
 # ── 사내 화면(HTML) 서빙 ──

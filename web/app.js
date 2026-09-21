@@ -1,11 +1,20 @@
 /* AI Platform 사내 콘솔 — 인증 가드 + 권한별 nav + 섹션 렌더. envelope({ok,data,meta}) 기준. */
 
-const SECTIONS = [
-  { id: 'ocrtest', label: 'OCR 테스트', ico: '🧪', perm: 'ocr:test' },
-  { id: 'ocrhist', label: '테스트 이력', ico: '📜', perm: 'ocr:test' },
-  { id: 'usage', label: '사용량',   ico: '💰', perm: 'usage:read' },
-  { id: 'logs',  label: '접근 로그', ico: '📈', perm: 'logs:read' },
-  { id: 'users', label: '유저 관리', ico: '👥', perm: 'users:manage' },
+// nav = 그룹 트리. module=null은 공통(항상), 그 외는 config.enabled_modules에 켜져야 표시.
+// 각 항목은 권한(perm)도 있어야 보임. 그룹에 볼 항목이 없으면 그룹째 숨김.
+const NAV = [
+  { group: '공통', module: null, items: [
+    { id: 'usage', label: '사용량',   ico: '💰', perm: 'usage:read' },
+    { id: 'logs',  label: '접근 로그', ico: '📈', perm: 'logs:read' },
+    { id: 'users', label: '유저 관리', ico: '👥', perm: 'users:manage' },
+  ] },
+  { group: 'OCR', module: 'ocr', items: [
+    { id: 'ocrtest', label: 'OCR 테스트', ico: '🧪', perm: 'ocr:test' },
+    { id: 'ocrhist', label: '테스트 이력', ico: '📜', perm: 'ocr:test' },
+  ] },
+  { group: '추천', module: 'recommend', items: [
+    // recommend 화면은 실엔진 작업 때 추가
+  ] },
 ];
 
 // ── helpers ──
@@ -44,13 +53,26 @@ async function init() {
   const perms = new Set(me.permissions || []);
   const has = p => perms.has('*') || perms.has(p);
 
-  const visible = SECTIONS.filter(s => has(s.perm));
-  $('nav').innerHTML = visible.map(s =>
-    `<a data-sec="${s.id}"><span class="ico">${s.ico}</span>${s.label}</a>`).join('');
+  let enabled = new Set();
+  try { enabled = new Set((await api('/core/modules')).enabled || []); } catch { /* 실패시 공통만 */ }
+
+  const flat = [];
+  let html = '';
+  NAV.forEach(g => {
+    if (g.module && !enabled.has(g.module)) return;         // 꺼진 모듈 그룹 숨김
+    const items = g.items.filter(s => has(s.perm));
+    if (!items.length) return;                              // 볼 항목 없으면 그룹째 숨김
+    html += `<div class="nav-group">${g.group}</div>`;
+    items.forEach(s => {
+      flat.push(s);
+      html += `<a data-sec="${s.id}"><span class="ico">${s.ico}</span>${s.label}</a>`;
+    });
+  });
+  $('nav').innerHTML = html;
   $('nav').querySelectorAll('a').forEach(a =>
     a.addEventListener('click', () => showSection(a.dataset.sec)));
 
-  if (visible.length) showSection(visible[0].id);
+  if (flat.length) showSection(flat[0].id);
   else document.querySelector('.content').innerHTML = '<div class="empty">접근 가능한 화면이 없습니다.</div>';
 }
 

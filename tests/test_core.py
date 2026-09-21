@@ -83,6 +83,16 @@ def test_ocr_test_history_records_run(client):
     assert all(r["id"] != runs[0]["id"] for r in client.get("/ocr/test/history").json()["data"]["runs"])
 
 
+def test_core_modules_endpoint(client):
+    """로그인 유저는 켜진 모듈 목록을 받는다(nav 모듈별 메뉴용). 비로그인은 401."""
+    assert client.get("/core/modules").status_code == 401
+    from core import users
+    users.create_user("t_mod", "pw", "개발자")
+    client.post("/auth/login", data={"username": "t_mod", "password": "pw"})
+    enabled = client.get("/core/modules").json()["data"]["enabled"]
+    assert "ocr" in enabled
+
+
 def test_test_run_recorded_under_test_tenant(client):
     """콘솔 테스트 실행은 __test__ tenant로 원장에 남는다(실/테스트 구분은 tenant명, 필터는 화면)."""
     from core import users
