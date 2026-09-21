@@ -138,4 +138,24 @@ table.tbl tr:hover td { background:var(--bg-tertiary); }
 .err-box { background:rgba(239,68,68,0.08); border:2px solid var(--red); color:var(--red); padding:8px 12px; border-radius:var(--radius-sm); font-size:12.5px; font-weight:600; margin-bottom:16px; box-shadow:2px 2px 0 var(--red); display:none; }
 .err-box.show { display:block; }
 .muted { color:var(--text-muted); } .empty { padding:40px; text-align:center; color:var(--text-muted); }
+
+/* ── OCR 테스트: 요청 카드 격자(폭 따라 2~3열). 결과는 카드 안, 길면 '더보기'로 펼침 ── */
+#ot-requests { display:grid; grid-template-columns:repeat(auto-fill,minmax(340px,1fr));
+  gap:16px; align-items:start; margin-bottom:14px; }
+/* 파일 목록: 내용 있으면 2줄 기준 고정 높이(1개·2개 카드 높이 통일), 넘치면 스크롤 */
+.ot-req .ot-filelist:not(:empty) { height:126px; overflow:auto; }
+/* 요약 칸: 눈에 띄되 높이 절약(작은 카드·작은 숫자) */
+.ot-sum { grid-template-columns:repeat(auto-fit,minmax(108px,1fr)); gap:8px; margin-bottom:12px; }
+.ot-sum .sc { padding:8px 10px; box-shadow:var(--shadow-sm); }
+.ot-sum .sc .l { font-size:9px; margin-bottom:3px; }
+.ot-sum .sc .v { font-size:17px; }
+.ot-result.clamp { max-height:260px; overflow:hidden; position:relative; }
+.ot-result.clamp::after { content:''; position:absolute; left:0; right:0; bottom:0; height:44px;
+  background:linear-gradient(transparent, var(--bg-primary)); pointer-events:none; }  /* 아래 페이드 */
+.ot-more { margin-top:8px; }
+
+/* ── OCR 테스트 결과 JSON ── */
+.ot-json { font-family:var(--font-mono); font-size:11.5px; line-height:1.5; white-space:pre-wrap; word-break:break-all;
+  background:var(--bg-secondary); border:1px solid var(--border-light); border-radius:var(--radius-sm);
+  padding:10px 12px; max-height:360px; overflow:auto; }
 @media (prefers-reduced-motion:reduce){ *{transition:none!important; animation:none!important;} }

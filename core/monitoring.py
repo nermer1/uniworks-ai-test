@@ -54,10 +54,16 @@ class RequestContextMiddleware:
             request_id_var.reset(token)
 
 
+# 정적파일·문서·아이콘은 접근 로그에서 제외(노이즈) — 의미있는 API/페이지 요청만 남김.
+_SKIP_PREFIXES = ("/static", "/favicon", "/docs", "/redoc", "/openapi.json")
+
+
 class AccessLogMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
         t0 = time.perf_counter()
         response = await call_next(request)
+        if any(request.url.path.startswith(p) for p in _SKIP_PREFIXES):
+            return response                       # 노이즈 경로는 기록 안 함
         ms = round((time.perf_counter() - t0) * 1000)
         # 스트림/파일 로그 (request_id 포함) — 쿼리는 access_log 테이블, 스트림은 여기.
         _access_log.info("request", extra={"method": request.method, "path": request.url.path,

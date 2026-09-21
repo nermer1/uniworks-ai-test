@@ -53,6 +53,27 @@ CREATE TABLE IF NOT EXISTS users (
     is_active     INTEGER NOT NULL DEFAULT 1,
     created_at    TEXT NOT NULL
 );
+
+-- 테스트 실행 이력 (콘솔 OCR 테스트 결과 보관 — 실사용 원장과 별개, 나중에 부하테스트도 kind로 공용)
+CREATE TABLE IF NOT EXISTS test_runs (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    ts           TEXT NOT NULL,
+    username     TEXT,                    -- 실행한 사람
+    group_name   TEXT,                    -- 비교용 그룹 태그 (예: vertex / 원본100)
+    kind         TEXT NOT NULL,           -- 'ocr' (추후 'load' 등)
+    provider     TEXT,
+    model        TEXT,
+    doc_type     TEXT,
+    file_count   INTEGER,
+    page_count   INTEGER,
+    ok_count     INTEGER,
+    fail_count   INTEGER,
+    wall_ms      INTEGER,
+    work_ms      INTEGER,
+    total_tokens INTEGER,
+    result       TEXT                     -- JSON: 응답 payload(파일별·페이지별 결과) — 상세 조회용
+);
+CREATE INDEX IF NOT EXISTS idx_testruns_ts ON test_runs (ts);
 """
 
 
@@ -68,6 +89,10 @@ def init_db() -> None:
     conn = connect()
     try:
         conn.executescript(_SCHEMA)
+        # 마이그레이션: 이전에 만들어진 test_runs엔 group_name이 없으므로 없으면 추가
+        cols = {r[1] for r in conn.execute("PRAGMA table_info(test_runs)").fetchall()}
+        if "group_name" not in cols:
+            conn.execute("ALTER TABLE test_runs ADD COLUMN group_name TEXT")
         conn.commit()
     finally:
         conn.close()

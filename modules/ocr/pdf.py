@@ -5,9 +5,16 @@ PDF는 '새 문서종류'가 아니라 '입력 컨테이너'(문서종류와 직
 """
 import fitz  # PyMuPDF
 
+from core.config import load_config
+
 _PDF_MAGIC = b"%PDF-"
 _MAX_PAGES = 20          # 방어: 초대형 PDF 상한
-_ZOOM = 2.0              # ~144dpi — OCR용 해상도 보강
+_ZOOM_DEFAULT = 2.0      # ~144dpi — OCR용 해상도 보강 (config.ocr.pdf_zoom로 덮어쓰기)
+
+
+def _zoom() -> float:
+    """PDF 렌더 배율 — config에서 매번 읽음(hot-reload). 배율↓ = 이미지 작아짐 = 토큰·비용↓."""
+    return float(load_config().get("ocr", {}).get("pdf_zoom", _ZOOM_DEFAULT))
 
 
 def is_pdf(data: bytes, mime: str | None) -> bool:
@@ -21,7 +28,8 @@ def render_pages(data: bytes) -> list[bytes]:
     pages: list[bytes] = []
     doc = fitz.open(stream=data, filetype="pdf")
     try:
-        mat = fitz.Matrix(_ZOOM, _ZOOM)
+        z = _zoom()
+        mat = fitz.Matrix(z, z)
         for page in doc:
             if len(pages) >= _MAX_PAGES:
                 break

@@ -1,6 +1,9 @@
 {
   "enabled_modules": ["ocr", "recommend"],
   "default_model": "mock",
+  "ocr": {
+    "pdf_zoom": 2.0
+  },
   "models": {
     "mock": {
       "provider": "mock"
@@ -24,7 +27,7 @@
       "vertex_project": "vertex-ai-user-505201",
       "vertex_location": "global",
       "structured_output": "json_schema",
-      "reasoning_effort": "minimal"
+      "reasoning_effort": "disable"
     }
   }
 }

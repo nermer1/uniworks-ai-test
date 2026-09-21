@@ -11,3 +11,5 @@ log/
 secrets/
 *.sa.json
 *service-account*.json
+.env
+.env.*

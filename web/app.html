@@ -31,6 +31,53 @@
     </div>
 
     <div class="content">
+      <!-- OCR 테스트 (ocr:test) -->
+      <section id="sec-ocrtest" hidden>
+        <div class="row-between">
+          <div>
+            <div class="sec-title">OCR 테스트</div>
+            <div class="sec-desc" style="margin-bottom:0">증빙 이미지·PDF를 올려 정형 JSON 추출을 확인합니다. 요청을 여러 개 추가해 각각 다른 파일·설정으로 테스트할 수 있습니다. 테스트 사용량은 실집계와 분리됩니다.</div>
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <button class="btn" id="ot-add">+ 요청 추가</button>
+            <button class="btn btn-primary" id="ot-run-all">전체 실행</button>
+          </div>
+        </div>
+        <div id="ot-requests"></div>
+        <datalist id="ot-groups"></datalist>
+      </section>
+
+      <!-- 테스트 이력 (ocr:test) -->
+      <section id="sec-ocrhist" hidden>
+        <div class="row-between">
+          <div>
+            <div class="sec-title">테스트 이력</div>
+            <div class="sec-desc" style="margin-bottom:0">표: 행 클릭 시 상세 결과 · 비교: 그룹별 소요시간을 겹쳐 비교</div>
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <button class="btn btn-primary" id="hist-view-table">📋 표</button>
+            <button class="btn" id="hist-view-compare">📊 비교</button>
+            <button class="btn btn-danger" id="hist-del-sel">선택 삭제</button>
+            <button class="btn" id="hist-refresh">새로고침</button>
+          </div>
+        </div>
+
+        <div id="hist-table-view">
+          <div class="card"><div class="card-head">최근 실행</div>
+            <div class="tbl-wrap"><table class="tbl" id="histTable"></table></div>
+          </div>
+          <div id="hist-detail" style="margin-top:18px"></div>
+        </div>
+
+        <div id="hist-compare-view" hidden>
+          <div class="card" style="margin-bottom:14px"><div class="card-head">그룹 선택 (다중)</div>
+            <div class="card-body" id="cmp-groups"></div></div>
+          <div class="card" style="margin-bottom:14px"><div class="card-head">소요시간 비교 (wall · 초)</div>
+            <div class="card-body" id="cmp-chart"></div></div>
+          <div class="summary" id="cmp-stats"></div>
+        </div>
+      </section>
+
       <!-- 사용량 (usage:read) -->
       <section id="sec-usage" hidden>
         <div class="sec-title">사용량</div>

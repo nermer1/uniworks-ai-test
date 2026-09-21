@@ -25,6 +25,38 @@ init_db()
 _log = get_logger("app")
 
 app = FastAPI(title="AI API Platform")
+# OpenAPI 3.0 고정 — 3.0에선 file 바이너리 정식 표기가 format:"binary". (Z 자바 클라
+# 생성 툴 호환에도 3.0이 무난)
+app.openapi_version = "3.0.3"
+
+
+# ── Swagger UI 파일 업로드 렌더 보정 ──
+# FastAPI(0.141)는 list[UploadFile] 바이너리를 3.1식 contentMediaType으로 표기하는데,
+# Swagger UI는 그걸 파일버튼이 아니라 텍스트칸(array<string>)으로 그린다. Swagger가
+# 인식하는 format:"binary"를 스키마에 덧발라 파일 선택 버튼이 뜨게 한다(모든 업로드 공통).
+def _mark_binary(node) -> None:
+    if isinstance(node, dict):
+        if node.get("type") == "string" and node.get("contentMediaType") == "application/octet-stream":
+            node["format"] = "binary"
+        for v in node.values():
+            _mark_binary(v)
+    elif isinstance(node, list):
+        for v in node:
+            _mark_binary(v)
+
+
+def _custom_openapi():
+    if app.openapi_schema:
+        return app.openapi_schema
+    from fastapi.openapi.utils import get_openapi
+    schema = get_openapi(title=app.title, version=app.version,
+                         openapi_version=app.openapi_version, routes=app.routes)
+    _mark_binary(schema)
+    app.openapi_schema = schema
+    return schema
+
+
+app.openapi = _custom_openapi
 
 # 미들웨어: 나중에 add한 게 최외곽. RequestContext가 최외곽이라 request_id가 제일 먼저 셋됨.
 app.add_middleware(AccessLogMiddleware)

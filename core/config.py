@@ -30,6 +30,11 @@ def default_model() -> str:
     return load_config().get("default_model", "")
 
 
+def available_models() -> list[str]:
+    """config에 정의된 모델 별칭 목록 (라우터 입력 검증용)."""
+    return list(load_config().get("models", {}).keys())
+
+
 def get_model_config(alias: str) -> dict:
     """모델 별칭 → provider 설정. api_key_env가 있으면 환경변수에서 실제 키를 채운다."""
     models = load_config().get("models", {})
