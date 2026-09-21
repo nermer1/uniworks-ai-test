@@ -1,8 +1,7 @@
-# recommend(추천) 모듈 쓰는 배포에서만 설치 (Stage 3).
+# recommend(추천) 모듈 쓰는 배포에서만 설치.
 #   uv pip install -r requirements-recommend.txt
 # 레퍼런스 A 기준 무거운 의존성(~GB) — OCR만 산 고객 서버엔 절대 안 깔림.
-# 모듈을 실제 이식할 때 아래 주석 해제:
-# --extra-index-url https://download.pytorch.org/whl/cpu
-# torch
-# sentence-transformers
-# qdrant-client==1.16.1
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch
+sentence-transformers
+qdrant-client==1.16.1
