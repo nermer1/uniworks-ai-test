@@ -121,39 +121,49 @@ function renderCompare() {
         <input type="checkbox" class="cmp-cb" data-i="${i}" checked> ${escapeHtml(g)}</label>`).join('')
     : '<div class="muted">그룹이 없습니다. 테스트 실행 시 그룹명을 지정하세요.</div>';
   $('cmp-groups').querySelectorAll('.cmp-cb').forEach(cb => cb.onchange = drawCompare);
+  $('cmp-metric').onchange = drawCompare;
   drawCompare();
 }
 
+// 지표별 값 추출·표기 설정
+const CMP_METRICS = {
+  wall:   { get: r => (r.wall_ms || 0) / 1000, unit: 's', dec: 2, label: '실제 경과(초)' },
+  work:   { get: r => (r.work_ms || 0) / 1000, unit: 's', dec: 2, label: '모델시간(초)' },
+  tokens: { get: r => r.total_tokens || 0,     unit: '',  dec: 0, label: '토큰 수' },
+};
+
 function drawCompare() {
+  const conf = CMP_METRICS[$('cmp-metric').value] || CMP_METRICS.wall;
   const sel = [...$('cmp-groups').querySelectorAll('.cmp-cb:checked')].map(cb => cmpGroups[+cb.dataset.i]);
   const series = sel.map((g, i) => {
     const runs = histRuns.filter(r => (r.group_name || '미지정') === g).sort((a, b) => a.id - b.id);
-    return { name: g, color: CMP_COLORS[i % CMP_COLORS.length], vals: runs.map(r => (r.wall_ms || 0) / 1000) };
+    return { name: g, color: CMP_COLORS[i % CMP_COLORS.length], vals: runs.map(conf.get) };
   });
-  $('cmp-chart').innerHTML = series.length ? svgLineChart(series) : '<div class="empty">그룹을 선택하세요.</div>';
+  $('cmp-chart').innerHTML = series.length ? svgLineChart(series, conf) : '<div class="empty">그룹을 선택하세요.</div>';
   $('cmp-stats').innerHTML = series.filter(s => s.vals.length).map(s => {
     const n = s.vals.length, avg = s.vals.reduce((a, b) => a + b, 0) / n;
     return `<div class="sc" style="border-left:4px solid ${s.color}">
       <div class="l">${escapeHtml(s.name)}</div>
-      <div class="v" style="font-size:17px">${avg.toFixed(2)}s <span class="muted" style="font-size:11px">평균</span></div>
-      <div class="muted" style="font-size:11px;margin-top:4px">${n}건 · 최소 ${Math.min(...s.vals).toFixed(2)} · 최대 ${Math.max(...s.vals).toFixed(2)}</div>
+      <div class="v" style="font-size:17px">${avg.toFixed(conf.dec)}${conf.unit} <span class="muted" style="font-size:11px">평균</span></div>
+      <div class="muted" style="font-size:11px;margin-top:4px">${n}건 · 최소 ${Math.min(...s.vals).toFixed(conf.dec)} · 최대 ${Math.max(...s.vals).toFixed(conf.dec)}</div>
     </div>`;
   }).join('') || '';
 }
 
-function svgLineChart(series) {
-  const W = 720, H = 320, pad = { l: 46, r: 16, t: 16, b: 34 };
+function svgLineChart(series, conf) {
+  const W = 720, H = 320, pad = { l: 50, r: 16, t: 16, b: 34 };
+  const fmt = v => v.toFixed(conf.dec) + conf.unit;
   const maxLen = Math.max(1, ...series.map(s => s.vals.length));
   const maxY = Math.max(1, ...series.flatMap(s => s.vals));
-  const yTop = Math.max(1, Math.ceil(maxY * 1.1));
+  const yTop = Math.max(1, maxY * 1.1);
   const X = i => pad.l + (maxLen <= 1 ? (W - pad.l - pad.r) / 2 : (i / (maxLen - 1)) * (W - pad.l - pad.r));
   const Y = v => H - pad.b - (v / yTop) * (H - pad.t - pad.b);
-  const grid = [0, .25, .5, .75, 1].map(f => { const v = yTop * f; return `<line x1="${pad.l}" y1="${Y(v)}" x2="${W - pad.r}" y2="${Y(v)}" stroke="var(--border-light)"/><text x="${pad.l - 6}" y="${Y(v) + 3}" text-anchor="end" font-size="10" fill="var(--text-muted)">${v.toFixed(1)}</text>`; }).join('');
+  const grid = [0, .25, .5, .75, 1].map(f => { const v = yTop * f; return `<line x1="${pad.l}" y1="${Y(v)}" x2="${W - pad.r}" y2="${Y(v)}" stroke="var(--border-light)"/><text x="${pad.l - 6}" y="${Y(v) + 3}" text-anchor="end" font-size="10" fill="var(--text-muted)">${v.toFixed(conf.dec)}</text>`; }).join('');
   const xlab = Array.from({ length: maxLen }, (_, i) => `<text x="${X(i)}" y="${H - pad.b + 16}" text-anchor="middle" font-size="10" fill="var(--text-muted)">${i + 1}</text>`).join('');
   const lines = series.map(s => {
     if (!s.vals.length) return '';
     const pts = s.vals.map((v, i) => `${X(i)},${Y(v)}`).join(' ');
-    const dots = s.vals.map((v, i) => `<circle cx="${X(i)}" cy="${Y(v)}" r="3" fill="${s.color}"><title>${escapeHtml(s.name)} #${i + 1}: ${v.toFixed(2)}s</title></circle>`).join('');
+    const dots = s.vals.map((v, i) => `<circle cx="${X(i)}" cy="${Y(v)}" r="3" fill="${s.color}"><title>${escapeHtml(s.name)} #${i + 1}: ${fmt(v)}</title></circle>`).join('');
     return `<polyline points="${pts}" fill="none" stroke="${s.color}" stroke-width="2"/>${dots}`;
   }).join('');
   const legend = series.map(s => `<span style="display:inline-flex;align-items:center;gap:5px;margin-right:14px;font-size:12px"><span style="width:14px;height:3px;background:${s.color};display:inline-block"></span>${escapeHtml(s.name)}</span>`).join('');
@@ -162,7 +172,7 @@ function svgLineChart(series) {
     <line x1="${pad.l}" y1="${H - pad.b}" x2="${W - pad.r}" y2="${H - pad.b}" stroke="var(--border-color)"/>
     ${grid}${xlab}${lines}</svg></div>
     <div style="margin-top:8px">${legend}</div>
-    <div class="muted" style="font-size:11px;margin-top:4px">X축 = 그룹 내 실행 순서 · Y축 = 실제 경과(초). 같은 순서끼리 비교하려면 각 그룹에서 같은 파일을 같은 순서로 실행하세요.</div>`;
+    <div class="muted" style="font-size:11px;margin-top:4px">X축 = 그룹 내 실행 순서 · Y축 = ${conf.label}. 같은 순서끼리 비교하려면 각 그룹에서 같은 파일을 같은 순서로 실행하세요.</div>`;
 }
 
 async function deleteRuns(ids) {
@@ -373,7 +383,13 @@ function filesHtml(data) {
 
 // ── 사용량 ──
 async function loadUsage() {
-  const rows = (await api('/core/usage')).rollup || [];
+  const fEl = $('usage-filter');
+  if (fEl) fEl.onchange = loadUsage;                         // 필터 바꾸면 재렌더
+  const mode = fEl?.value || 'real';
+  const isInternal = t => (t || '').startsWith('__');        // '__' 접두사 = 테스트/내부 구분자
+  let rows = (await api('/core/usage')).rollup || [];
+  if (mode === 'real') rows = rows.filter(r => !isInternal(r.tenant));
+  else if (mode === 'test') rows = rows.filter(r => isInternal(r.tenant));
   const tReq = rows.reduce((a, r) => a + r.requests, 0);
   const tQty = rows.reduce((a, r) => a + r.quantity, 0);
   const tenants = new Set(rows.map(r => r.tenant)).size;

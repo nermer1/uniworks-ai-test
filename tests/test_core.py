@@ -83,6 +83,17 @@ def test_ocr_test_history_records_run(client):
     assert all(r["id"] != runs[0]["id"] for r in client.get("/ocr/test/history").json()["data"]["runs"])
 
 
+def test_test_run_recorded_under_test_tenant(client):
+    """콘솔 테스트 실행은 __test__ tenant로 원장에 남는다(실/테스트 구분은 tenant명, 필터는 화면)."""
+    from core import users
+    users.create_user("t_admin2", "pw", "관리자")            # 관리자 = ocr:test + usage:read 둘 다
+    client.post("/auth/login", data={"username": "t_admin2", "password": "pw"})
+    client.post("/ocr/test", data={"model": "mock", "doc_type": "card"},
+                files={"files": ("t.png", b"x", "image/png")})
+    rollup = client.get("/core/usage").json()["data"]["rollup"]
+    assert any(r["tenant"] == "__test__" for r in rollup)
+
+
 def test_ocr_test_route_accounting_forbidden(client):
     """회계는 ocr:test 권한 없음 → 403."""
     from core import users

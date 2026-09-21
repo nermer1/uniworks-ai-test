@@ -73,7 +73,7 @@ def health():
 
 @app.get("/core/usage")
 def usage(user: User = Depends(require_permission("usage:read"))):
-    """고객사별 사용량 롤업 — 회계 화면(회계/관리자 role)이 소비."""
+    """고객사별 사용량 롤업 — 회계 화면(회계/관리자 role)이 소비. 실/테스트 필터는 화면에서."""
     return success({"rollup": ledger.rollup()})
 
 

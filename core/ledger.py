@@ -28,8 +28,13 @@ def append(tenant: str, feature: str, quantity: int, unit: str,
         conn.close()
 
 
+TEST_TENANT = "__test__"   # 콘솔 OCR 테스트 tenant. '__' 접두사 = 내부/비청구 tenant 구분자
+INTERNAL_PREFIX = "__"     # 이 접두사 tenant는 화면에서 '실고객사' 필터로 걸러진다
+
+
 def rollup(tenant: str | None = None) -> list[dict]:
-    """고객사별·기능별·provider별 집계 (회계 화면 데이터)."""
+    """고객사별·기능별·provider별 집계. 전부 반환하고, 실/테스트 구분은 tenant명(__접두사)으로.
+    (화면이 __ 접두사로 필터링 — 실고객사/테스트/전체)."""
     conn = connect()
     try:
         sql = (

@@ -72,7 +72,15 @@
         <div id="hist-compare-view" hidden>
           <div class="card" style="margin-bottom:14px"><div class="card-head">그룹 선택 (다중)</div>
             <div class="card-body" id="cmp-groups"></div></div>
-          <div class="card" style="margin-bottom:14px"><div class="card-head">소요시간 비교 (wall · 초)</div>
+          <div class="card" style="margin-bottom:14px">
+            <div class="card-head" style="display:flex;justify-content:space-between;align-items:center">
+              <span>지표 비교</span>
+              <select class="inp" id="cmp-metric" style="width:auto;padding:4px 10px;box-shadow:none;text-transform:none">
+                <option value="wall">실제 경과 (wall · 초)</option>
+                <option value="work">모델시간 (work · 초)</option>
+                <option value="tokens">토큰 수</option>
+              </select>
+            </div>
             <div class="card-body" id="cmp-chart"></div></div>
           <div class="summary" id="cmp-stats"></div>
         </div>
@@ -82,6 +90,14 @@
       <section id="sec-usage" hidden>
         <div class="sec-title">사용량</div>
         <div class="sec-desc">고객사별·기능별 사용량 집계 (청구 근거)</div>
+        <div style="margin-bottom:14px">
+          <label class="muted" style="font-size:12px;margin-right:8px">보기</label>
+          <select class="inp" id="usage-filter" style="width:auto;padding:4px 10px;box-shadow:none">
+            <option value="real">실고객사만</option>
+            <option value="test">테스트만 (__)</option>
+            <option value="all">전체</option>
+          </select>
+        </div>
         <div class="summary" id="usageSummary"></div>
         <div class="card"><div class="card-head">사용량 원장 롤업</div>
           <div class="tbl-wrap"><table class="tbl" id="usageTable"></table></div>

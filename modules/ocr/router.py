@@ -19,11 +19,10 @@ from core.config import default_model, available_models
 from core.envelope import success
 from core.errors import ApiError
 from core import test_runs
+from core.ledger import TEST_TENANT      # 콘솔 테스트 tenant (rollup서 제외되는 그 값과 동일)
 from modules.ocr import extract, service
 
 router = APIRouter(prefix="/ocr", tags=["ocr"])
-
-TEST_TENANT = "__test__"      # 콘솔 테스트 사용량 — 실데이터 롤업과 분리(나중에 제외)
 
 
 def _validate(alias: str, doc_type: str) -> None:
