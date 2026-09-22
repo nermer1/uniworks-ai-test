@@ -15,6 +15,9 @@ const NAV = [
   { group: '추천', module: 'recommend', items: [
     { id: 'rectest', label: '추천 테스트', ico: '🎯', perm: 'recommend:test' },
   ] },
+  { group: '전결규정', module: 'approval', items: [
+    { id: 'apvtest', label: '전결규정 테스트', ico: '📋', perm: 'approval:test' },
+  ] },
 ];
 
 // ── helpers ──
@@ -80,10 +83,85 @@ function showSection(id) {
   document.querySelectorAll('.content section').forEach(s => s.hidden = true);
   $('sec-' + id).hidden = false;
   document.querySelectorAll('#nav a').forEach(a => a.classList.toggle('active', a.dataset.sec === id));
-  const labels = { ocrtest: 'OCR 테스트', ocrhist: '테스트 이력', rectest: '추천 테스트', usage: '사용량', logs: '접근 로그', users: '유저 관리' };
+  const labels = { ocrtest: 'OCR 테스트', ocrhist: '테스트 이력', rectest: '추천 테스트', apvtest: '전결규정 테스트', usage: '사용량', logs: '접근 로그', users: '유저 관리' };
   $('pageTitle').textContent = labels[id];
-  const loaders = { ocrtest: loadOcrTest, ocrhist: loadOcrHistory, rectest: loadRecTest, usage: loadUsage, logs: loadLogs, users: loadUsers };
+  const loaders = { ocrtest: loadOcrTest, ocrhist: loadOcrHistory, rectest: loadRecTest, apvtest: loadApvTest, usage: loadUsage, logs: loadLogs, users: loadUsers };
   loaders[id]().catch(e => toast(e.message, 'err'));
+}
+
+// ── 전결규정 테스트 ──
+async function loadApvTest() {
+  try {
+    const c = await api('/approval/test/collections');
+    const def = c.default || 'APPROVAL_RULE';
+    $('av-collection').innerHTML = (c.collections || []).map(x =>
+      `<option value="${escapeHtml(x)}"${x === def ? ' selected' : ''}>${escapeHtml(x)}</option>`).join('')
+      || `<option value="${escapeHtml(def)}">${escapeHtml(def)}</option>`;
+  } catch (e) {
+    $('av-collection').innerHTML = '<option value="APPROVAL_RULE">APPROVAL_RULE</option>';
+    toast(e.message, 'err');
+  }
+  $('av-run').onclick = runApvTest;
+}
+
+async function runApvTest() {
+  const q = $('av-query').value.trim();
+  if (!q) { toast('질문(QUERY_TEXT)을 입력하세요', 'err'); return; }
+  const filters = {};
+  const put = (k, id) => { const v = $(id).value.trim(); if (v) filters[k] = v; };
+  put('BUKRS', 'av-bukrs'); put('CATEGORY', 'av-category');
+  put('REQUESTER_GROUP', 'av-requester'); put('AMOUNT_KRW', 'av-amount');
+  if ($('av-doctype').value) filters.DOCUMENT_TYPE = $('av-doctype').value;
+  if ($('av-ruletype').value) filters.RULE_TYPE = $('av-ruletype').value;
+  const body = { QUERY_TEXT: q, COLLECTION: $('av-collection').value, TOP_K: 5, FILTERS: filters };
+
+  const btn = $('av-run'); btn.disabled = true;
+  $('av-status').textContent = '검색 중…'; $('av-result').innerHTML = '';
+  try {
+    const res = await fetch('/approval/test', {
+      method: 'POST', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+    });
+    if (res.status === 401) { location.href = '/login'; return; }
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.error?.message || ('HTTP ' + res.status));
+    renderApvTest(json.data);
+    $('av-status').textContent = '완료';
+  } catch (e) {
+    toast(e.message, 'err'); $('av-status').textContent = '실패';
+  } finally { btn.disabled = false; }
+}
+
+function renderApvTest(data) {
+  const items = data.ITEMS || [];
+  const msg = data.META?.MESSAGE;
+  if (!items.length) {
+    $('av-result').innerHTML = `<div class="empty">${escapeHtml(msg || '일치하는 규정이 없습니다.')}</div>`;
+    return;
+  }
+  const amt = a => {
+    if (!a) return '-';
+    const lo = a.MIN_KRW != null ? `${a.MIN_KRW}${a.MIN_INCLUSIVE ? '≤' : '<'}` : '';
+    const hi = a.MAX_KRW != null ? `${a.MAX_INCLUSIVE ? '≤' : '<'}${a.MAX_KRW}` : '';
+    return (lo || hi) ? `${lo} 금액 ${hi}` : '-';
+  };
+  $('av-result').innerHTML = `
+    <div class="muted" style="margin-bottom:10px">${items.length}건 · MIN_SCORE ${data.META?.MIN_SCORE ?? ''} · ${data.ELAPSED}s</div>
+    ${items.map(it => `
+      <div class="card" style="margin-bottom:12px">
+        <div class="card-head" style="display:flex;justify-content:space-between;align-items:center">
+          <span>${escapeHtml(it.RULE_TYPE || '')} · ${escapeHtml(it.CONDITIONS?.CATEGORY || '')}</span>
+          <span class="st-2xx">${it.SIMILARITY}%</span>
+        </div>
+        <div class="card-body">
+          <div style="line-height:1.6;margin-bottom:10px">${escapeHtml(it.TEXT?.PASSAGE || '')}</div>
+          <div class="mono muted" style="font-size:11px;line-height:1.7">
+            결재선: ${escapeHtml(it.OUTPUT?.APPROVAL_LINE_REQUIRED || '-')} · 승인자: ${escapeHtml((it.OUTPUT?.APPROVER_CODES || []).join(', ') || '-')}<br>
+            기안자군: ${escapeHtml(it.CONDITIONS?.REQUESTER_GROUP || '-')} · ${escapeHtml(amt(it.CONDITIONS?.AMOUNT))}<br>
+            ${escapeHtml(it.DOCUMENT_TYPE || '')} · ${escapeHtml(it.DOC_NAME || '')} · RULE_ID ${escapeHtml(it.RULE_ID || '')}
+          </div>
+        </div>
+      </div>`).join('')}`;
 }
 
 // ── 추천 테스트 ──

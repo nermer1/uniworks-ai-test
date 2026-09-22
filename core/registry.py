@@ -10,6 +10,7 @@ from core.config import enabled_modules
 _MODULE_IMPORTS = {
     "ocr": "modules.ocr",
     "recommend": "modules.recommend",
+    "approval": "modules.approval",
 }
 
 

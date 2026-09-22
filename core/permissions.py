@@ -29,7 +29,7 @@ def check_model(principal: Principal, alias: str) -> None:
 # 접근 규칙을 여기 한 곳에서 관리. 엔드포인트는 role이 아니라 permission을 체크.
 # ─────────────────────────────────────────────────────────
 ROLE_PERMISSIONS: dict[str, set[str]] = {
-    "개발자": {"logs:read", "monitoring:read", "ocr:test", "recommend:test"},
+    "개발자": {"logs:read", "monitoring:read", "ocr:test", "recommend:test", "approval:test"},
     "회계":   {"usage:read", "usage:export", "billing:read"},
     "관리자": {"*"},   # 전체
 }

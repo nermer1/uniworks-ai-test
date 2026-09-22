@@ -22,7 +22,7 @@ def main():
     raw_key = "sk-" + secrets.token_urlsafe(32)
     key_id = uuid.uuid4().hex[:8]
     capabilities = {
-        "features": ["ocr", "recommend", "admin"],
+        "features": ["ocr", "recommend", "approval", "admin"],
         "models": ["mock", "vllm", "gemini", "vertex"],
     }
     conn = connect()

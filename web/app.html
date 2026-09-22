@@ -117,6 +117,45 @@
         <div id="rt-result"></div>
       </section>
 
+      <!-- 전결규정 테스트 (approval:test) -->
+      <section id="sec-apvtest" hidden>
+        <div class="sec-title">전결규정 테스트</div>
+        <div class="sec-desc">질문으로 전결규정·결재선을 검색합니다. 테스트 사용량은 실집계와 분리됩니다.</div>
+        <div class="card" style="margin-bottom:18px">
+          <div class="card-head">입력</div>
+          <div class="card-body">
+            <div class="field"><label>질문 (QUERY_TEXT)</label>
+              <input class="inp" id="av-query" placeholder="예: 접대비 팀장 50만원 이하 결재선"></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+              <div class="field"><label>컬렉션</label><select class="inp" id="av-collection"></select></div>
+              <div class="field"><label>문서종류</label>
+                <select class="inp" id="av-doctype">
+                  <option value="">(전체)</option>
+                  <option value="approval_policy">전결규정</option>
+                  <option value="travel_policy">출장규정</option>
+                </select></div>
+              <div class="field"><label>규칙종류</label>
+                <select class="inp" id="av-ruletype">
+                  <option value="">(전체)</option>
+                  <option value="approval_line">결재선</option>
+                  <option value="amount_limit">금액한도</option>
+                  <option value="evidence">증빙요건</option>
+                  <option value="general">일반</option>
+                </select></div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px">
+              <div class="field"><label>회사코드 (BUKRS)</label><input class="inp" id="av-bukrs" placeholder="선택"></div>
+              <div class="field"><label>카테고리</label><input class="inp" id="av-category" placeholder="예: 접대비"></div>
+              <div class="field"><label>기안자군</label><input class="inp" id="av-requester" placeholder="예: 팀장"></div>
+              <div class="field"><label>금액(원)</label><input class="inp" id="av-amount" placeholder="예: 300000"></div>
+            </div>
+            <button class="btn btn-primary" id="av-run">검색</button>
+            <span class="muted" id="av-status" style="margin-left:12px"></span>
+          </div>
+        </div>
+        <div id="av-result"></div>
+      </section>
+
       <!-- 사용량 (usage:read) -->
       <section id="sec-usage" hidden>
         <div class="sec-title">사용량</div>
